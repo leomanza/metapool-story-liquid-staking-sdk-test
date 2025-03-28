@@ -1,0 +1,22 @@
+{
+  "name": "story-liquid-staking-sdk-test",
+  "version": "1.0.0",
+  "description": "Example usage of the Story Liquid Staking SDK",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "ethers": "^6.11.1",
+    "story-liquid-staking-sdk": "file:../story-liquid-staking-sdk"
+  },
+  "devDependencies": {
+    "@types/dotenv": "^8.2.0",
+    "@types/node": "^20.11.19",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  }
+} 
