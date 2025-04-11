@@ -43,10 +43,10 @@ async function main() {
     const requiredEnvVars = [
         'RPC_URL',
         'PRIVATE_KEY',
+        'IP_TOKEN_ADDRESS',
         'STAKED_IP_ADDRESS',
         'WITHDRAWAL_ADDRESS',
         'REWARDS_MANAGER_ADDRESS',
-        'WIP_ADDRESS',
         'RECIPIENT_ADDRESS'
     ];
     for (const envVar of requiredEnvVars) {
@@ -56,8 +56,14 @@ async function main() {
     }
     // Initialize provider and signer
     const provider = new ethers_1.ethers.JsonRpcProvider(process.env.RPC_URL);
+    provider.getResolver = async () => null; // Disable ENS resolution
     const signer = new ethers_1.ethers.Wallet(process.env.PRIVATE_KEY, provider);
     // Initialize contract instances
+    const ipToken = new story_liquid_staking_sdk_1.IPToken({
+        address: process.env.IP_TOKEN_ADDRESS,
+        provider,
+        signer
+    });
     const stakedIP = new story_liquid_staking_sdk_1.StakedIP({
         address: process.env.STAKED_IP_ADDRESS,
         provider,
@@ -73,15 +79,25 @@ async function main() {
         provider,
         signer
     });
-    const wip = new story_liquid_staking_sdk_1.WIP({
-        address: process.env.WIP_ADDRESS,
-        provider,
-        signer
-    });
     try {
+        // Check IP token balance
+        const ipBalance = await ipToken.balanceOf(await signer.getAddress());
+        console.log('IP token balance:', ipBalance.toString());
+        // Check if we have enough IP tokens
+        const stakeAmount = BigInt(1000000000000000000); // 1 token
+        if (ipBalance < stakeAmount) {
+            throw new Error('Not enough IP tokens to stake');
+        }
+        // Check if we have approved enough tokens
+        const allowance = await ipToken.allowance(await signer.getAddress(), stakedIP.address);
+        if (allowance < stakeAmount) {
+            console.log('Approving IP tokens...');
+            const approveTx = await ipToken.approve(stakedIP.address, stakeAmount);
+            await approveTx.wait();
+            console.log('Approval successful!');
+        }
         // Example: Stake tokens
         console.log('Staking tokens...');
-        const stakeAmount = BigInt(1000000000000000000); // 1 token
         const stakeTx = await stakedIP.stake(stakeAmount);
         await stakeTx.wait();
         console.log('Staking successful!');
@@ -102,15 +118,6 @@ async function main() {
         const claimTx = await stakedIP.claimRewards();
         await claimTx.wait();
         console.log('Rewards claimed!');
-        // Example: Transfer WIP tokens
-        console.log('Transferring WIP tokens...');
-        const transferAmount = BigInt(100000000000000000); // 0.1 tokens
-        const transferTx = await wip.transfer(process.env.RECIPIENT_ADDRESS, transferAmount);
-        await transferTx.wait();
-        console.log('Transfer successful!');
-        // Example: Check WIP balance
-        const wipBalance = await wip.balanceOf(await signer.getAddress());
-        console.log('WIP balance:', wipBalance.toString());
     }
     catch (error) {
         console.error('Error:', error);
